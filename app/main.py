@@ -127,6 +127,8 @@ def read_device_readings(device_id: int, skip: int = 0, limit: int = 10, db: Ses
 
 @app.get("/device_readings_pdf", tags=["Device Readings"], response_class=Response)
 def generate_device_readings_pdf_endpoint(device_id: int = None, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
-    readings = crud.get_device_readings(db, device_id=device_id, skip=0, limit=100)  # Example: Fetching all readings
+    readings = crud.get_device_readings(db, device_id=device_id, skip=0, limit=100)  # Fetching all readings for device_id
     pdf_buffer = pdf_generator.generate_device_readings_pdf(readings)
-    return Response(content=pdf_buffer.getvalue(), media_type="application/pdf", headers={"Content-Disposition": "inline; filename=device_readings.pdf"})
+    response = Response(content=pdf_buffer.getvalue(), media_type="application/pdf")
+    response.headers["Content-Disposition"] = 'attachment; filename="device_readings.pdf"'
+    return response
