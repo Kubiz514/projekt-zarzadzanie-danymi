@@ -38,6 +38,8 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     access_token = auth.create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}
 
+# User endpoints...
+
 @app.post("/users/", response_model=schemas.User, tags=["Users"])
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = crud.get_user_by_username(db, username=user.username)
@@ -70,3 +72,68 @@ def update_user(user_id: int, user: schemas.UserCreate, db: Session = Depends(ge
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return crud.update_user(db=db, user_id=user_id, user_update=user)
+
+# Device endpoints
+@app.post("/devices/", response_model=schemas.Device, tags=["Devices"])
+def create_device(device: schemas.DeviceCreate, db: Session = Depends(get_db)):
+    db_device = crud.get_device_by_serial_number(db, serial_number=device.serial_number)
+    if db_device:
+        raise HTTPException(status_code=400, detail="Device with this serial number already registered")
+    return crud.create_device(db=db, device=device)
+
+@app.get("/devices/{device_id}", response_model=schemas.Device, tags=["Devices"])
+def read_device(device_id: int, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+    db_device = crud.get_device(db, device_id=device_id)
+    if db_device is None:
+        raise HTTPException(status_code=404, detail="Device not found")
+    return db_device
+
+@app.get("/devices/", response_model=list[schemas.Device], tags=["Devices"])
+def read_devices(skip: int = 0, limit: int = 10, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+    devices = crud.get_devices(db, skip=skip, limit=limit)
+    return devices
+
+@app.delete("/devices/{device_id}", response_model=schemas.Device, tags=["Devices"])
+def delete_device(device_id: int, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+    db_device = crud.get_device(db, device_id=device_id)
+    if db_device is None:
+        raise HTTPException(status_code=404, detail="Device not found")
+    return crud.delete_device(db=db, device_id=device_id)
+
+@app.put("/devices/{device_id}", response_model=schemas.Device, tags=["Devices"])
+def update_device(device_id: int, device: schemas.DeviceCreate, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+    db_device = crud.get_device(db, device_id=device_id)
+    if db_device is None:
+        raise HTTPException(status_code=404, detail="Device not found")
+    return crud.update_device(db=db, device_id=device_id, device_update=device)
+
+# DeviceReading endpoints
+@app.post("/device_readings/", response_model=schemas.DeviceReading, tags=["Device Readings"])
+def create_device_reading(reading: schemas.DeviceReadingCreate, db: Session = Depends(get_db)):
+    return crud.create_device_reading(db=db, reading=reading)
+
+@app.get("/device_readings/{reading_id}", response_model=schemas.DeviceReading, tags=["Device Readings"])
+def read_device_reading(reading_id: int, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+    db_reading = crud.get_device_reading(db, reading_id=reading_id)
+    if db_reading is None:
+        raise HTTPException(status_code=404, detail="Reading not found")
+    return db_reading
+
+@app.get("/device_readings/", response_model=list[schemas.DeviceReading], tags=["Device Readings"])
+def read_device_readings(device_id: int, skip: int = 0, limit: int = 10, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+    readings = crud.get_device_readings(db, device_id=device_id, skip=skip, limit=limit)
+    return readings
+
+@app.delete("/device_readings/{reading_id}", response_model=schemas.DeviceReading, tags=["Device Readings"])
+def delete_device_reading(reading_id: int, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+    db_reading = crud.get_device_reading(db, reading_id=reading_id)
+    if db_reading is None:
+        raise HTTPException(status_code=404, detail="Reading not found")
+    return crud.delete_device_reading(db=db, reading_id=reading_id)
+
+@app.put("/device_readings/{reading_id}", response_model=schemas.DeviceReading, tags=["Device Readings"])
+def update_device_reading(reading_id: int, reading: schemas.DeviceReadingCreate, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+    db_reading = crud.get_device_reading(db, reading_id=reading_id)
+    if db_reading is None:
+        raise HTTPException(status_code=404, detail="Reading not found")
+    return crud.update_device_reading(db=db, reading_id=reading_id, reading_update=reading)

@@ -1,4 +1,6 @@
 from pydantic import BaseModel
+from datetime import datetime
+from typing import List
 
 class UserBase(BaseModel):
     username: str
@@ -19,3 +21,30 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: str | None = None
+
+class DeviceBase(BaseModel):
+    name: str
+    serial_number: str
+
+class DeviceCreate(DeviceBase):
+    pass
+
+class Device(DeviceBase):
+    id: int
+
+    class Config:
+        orm_mode = True
+
+class DeviceReadingBase(BaseModel):
+    device_id: int
+    reading_date: datetime
+    value: float
+
+class DeviceReadingCreate(DeviceReadingBase):
+    pass
+
+class DeviceReading(DeviceReadingBase):
+    id: int
+
+    class Config:
+        orm_mode = True
