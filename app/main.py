@@ -1,7 +1,8 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from . import models, schemas, crud, auth
+from io import BytesIO
+from . import models, schemas, crud, auth, pdf_generator
 from .database import SessionLocal, engine
 
 models.Base.metadata.create_all(bind=engine)
@@ -112,14 +113,20 @@ def update_device(device_id: int, device: schemas.DeviceCreate, db: Session = De
 def create_device_reading(reading: schemas.DeviceReadingCreate, db: Session = Depends(get_db)):
     return crud.create_device_reading(db=db, reading=reading)
 
-@app.get("/device_readings/{reading_id}", response_model=schemas.DeviceReading, tags=["Device Readings"])
+@app.get("/device_readings/{reading_id}", tags=["Device Readings"], response_model=schemas.DeviceReading)
 def read_device_reading(reading_id: int, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
-    db_reading = crud.get_device_reading(db, reading_id=reading_id)
-    if db_reading is None:
+    reading = crud.get_device_reading(db, reading_id=reading_id)
+    if reading is None:
         raise HTTPException(status_code=404, detail="Reading not found")
-    return db_reading
+    return reading
 
 @app.get("/device_readings/", response_model=list[schemas.DeviceReading], tags=["Device Readings"])
 def read_device_readings(device_id: int, skip: int = 0, limit: int = 10, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
     readings = crud.get_device_readings(db, device_id=device_id, skip=skip, limit=limit)
     return readings
+
+@app.get("/device_readings_pdf", tags=["Device Readings"], response_class=Response)
+def generate_device_readings_pdf_endpoint(device_id: int = None, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+    readings = crud.get_device_readings(db, device_id=device_id, skip=0, limit=100)  # Example: Fetching all readings
+    pdf_buffer = pdf_generator.generate_device_readings_pdf(readings)
+    return Response(content=pdf_buffer.getvalue(), media_type="application/pdf", headers={"Content-Disposition": "inline; filename=device_readings.pdf"})
