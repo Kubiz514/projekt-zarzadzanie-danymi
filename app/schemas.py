@@ -1,6 +1,7 @@
+# Remove this import if not used elsewhere
 from pydantic import BaseModel
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 class UserBase(BaseModel):
     username: str
@@ -18,9 +19,6 @@ class User(UserBase):
 class Token(BaseModel):
     access_token: str
     token_type: str
-
-class TokenData(BaseModel):
-    username: str | None = None
 
 class DeviceBase(BaseModel):
     name: str

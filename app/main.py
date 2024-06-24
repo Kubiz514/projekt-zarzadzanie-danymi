@@ -123,17 +123,3 @@ def read_device_reading(reading_id: int, db: Session = Depends(get_db), token: s
 def read_device_readings(device_id: int, skip: int = 0, limit: int = 10, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
     readings = crud.get_device_readings(db, device_id=device_id, skip=skip, limit=limit)
     return readings
-
-@app.delete("/device_readings/{reading_id}", response_model=schemas.DeviceReading, tags=["Device Readings"])
-def delete_device_reading(reading_id: int, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
-    db_reading = crud.get_device_reading(db, reading_id=reading_id)
-    if db_reading is None:
-        raise HTTPException(status_code=404, detail="Reading not found")
-    return crud.delete_device_reading(db=db, reading_id=reading_id)
-
-@app.put("/device_readings/{reading_id}", response_model=schemas.DeviceReading, tags=["Device Readings"])
-def update_device_reading(reading_id: int, reading: schemas.DeviceReadingCreate, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
-    db_reading = crud.get_device_reading(db, reading_id=reading_id)
-    if db_reading is None:
-        raise HTTPException(status_code=404, detail="Reading not found")
-    return crud.update_device_reading(db=db, reading_id=reading_id, reading_update=reading)
