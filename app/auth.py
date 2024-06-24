@@ -8,7 +8,6 @@ from sqlalchemy.orm import Session
 from . import schemas, models, crud
 from .database import SessionLocal
 
-# to get a string like this run: openssl rand -hex 32
 SECRET_KEY = "your_secret_key"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
