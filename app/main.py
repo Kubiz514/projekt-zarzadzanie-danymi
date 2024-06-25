@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, Response
+from fastapi import FastAPI, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from io import BytesIO
@@ -48,31 +48,28 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(auth.get_db)):
         raise HTTPException(status_code=400, detail="Username already registered")
     return crud.create_user(db=db, user=user)
 
-@app.get("/users/{user_id}", response_model=schemas.User, tags=["Users"])
-def read_user(user_id: int, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
-    db_user = crud.get_user(db, user_id=user_id)
-    if db_user is None:
+@app.get("/users/me", response_model=schemas.User, tags=["Users"])
+def read_user_me(db: Session = Depends(auth.get_db), current_user: schemas.User = Depends(auth.get_current_active_user)):
+    return current_user
+
+@app.put("/users/me", response_model=schemas.User, tags=["Users"])
+def update_user_me(user: schemas.UserUpdate, db: Session = Depends(auth.get_db), current_user: schemas.User = Depends(auth.get_current_active_user)):
+    updated_user = crud.update_user(db, user_id=current_user.id, user=user)
+    if not updated_user:
         raise HTTPException(status_code=404, detail="User not found")
-    return db_user
+    return updated_user
+
+@app.delete("/users/me", response_model=schemas.User, tags=["Users"])
+def delete_user_me(db: Session = Depends(auth.get_db), current_user: schemas.User = Depends(auth.get_current_active_user)):
+    deleted_user = crud.delete_user(db, user_id=current_user.id)
+    if not deleted_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return deleted_user
 
 @app.get("/users/", response_model=list[schemas.User], tags=["Users"])
 def read_users(skip: int = 0, limit: int = 10, db: Session = Depends(auth.get_db)):
     users = crud.get_users(db, skip=skip, limit=limit)
     return users
-
-@app.delete("/users/{user_id}", response_model=schemas.User, tags=["Users"])
-def delete_user(user_id: int, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
-    db_user = crud.get_user(db, user_id=user_id)
-    if db_user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    return crud.delete_user(db=db, user_id=user_id)
-
-@app.put("/users/{user_id}", response_model=schemas.User, tags=["Users"])
-def update_user(user_id: int, user: schemas.UserCreate, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
-    db_user = crud.get_user(db, user_id=user_id)
-    if db_user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    return crud.update_user(db=db, user_id=user_id, user_update=user)
 
 # Device endpoints
 @app.post("/devices/", response_model=schemas.Device, tags=["Devices"])
