@@ -1,3 +1,5 @@
+import os
+import yaml
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -7,7 +9,11 @@ from sqlalchemy.orm import Session
 from app import models, schemas, crud
 from app.database import SessionLocal
 
-SECRET_KEY = "cc3ba25e732d0ee42a584ae0b7f6ca9f"
+secrets_file = os.path.join(os.path.dirname(__file__), 'secrets.yaml')
+with open(secrets_file, 'r') as f:
+    secrets = yaml.safe_load(f)
+SECRET_KEY = secrets.get('SECRET_KEY')
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
