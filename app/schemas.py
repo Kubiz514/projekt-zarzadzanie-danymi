@@ -22,6 +22,10 @@ class DeviceBase(BaseModel):
 class DeviceCreate(DeviceBase):
     pass
 
+class DeviceUpdate(DeviceBase):
+    name: Optional[str] = None
+    serial_number: Optional[str] = None
+
 class Device(DeviceBase):
     id: int
     owner_id: int

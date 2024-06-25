@@ -83,11 +83,11 @@ def create_device(device: schemas.DeviceCreate, db: Session = Depends(get_db), c
     return crud.create_device(db=db, device=device, user_id=current_user.id)
 
 @app.get("/devices/{device_id}", response_model=schemas.Device, tags=["Devices"])
-def read_device(device_id: int, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
-    db_device = crud.get_device(db, device_id=device_id)
-    if db_device is None:
+def read_device(device_id: int, db: Session = Depends(auth.get_db), current_user: schemas.User = Depends(auth.get_current_active_user)):
+    device = crud.get_device(db, device_id=device_id, user_id=current_user.id)
+    if not device:
         raise HTTPException(status_code=404, detail="Device not found")
-    return db_device
+    return device
 
 @app.get("/devices/", response_model=list[schemas.Device], tags=["Devices"])
 def read_devices(skip: int = 0, limit: int = 10, db: Session = Depends(auth.get_db), current_user: schemas.User = Depends(auth.get_current_active_user)):
@@ -95,18 +95,18 @@ def read_devices(skip: int = 0, limit: int = 10, db: Session = Depends(auth.get_
     return devices
 
 @app.delete("/devices/{device_id}", response_model=schemas.Device, tags=["Devices"])
-def delete_device(device_id: int, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
-    db_device = crud.get_device(db, device_id=device_id)
-    if db_device is None:
+def delete_device(device_id: int, db: Session = Depends(auth.get_db), current_user: schemas.User = Depends(auth.get_current_active_user)):
+    deleted_device = crud.delete_device(db, device_id=device_id, user_id=current_user.id)
+    if not deleted_device:
         raise HTTPException(status_code=404, detail="Device not found")
-    return crud.delete_device(db=db, device_id=device_id)
+    return deleted_device
 
 @app.put("/devices/{device_id}", response_model=schemas.Device, tags=["Devices"])
-def update_device(device_id: int, device: schemas.DeviceCreate, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
-    db_device = crud.get_device(db, device_id=device_id)
-    if db_device is None:
+def update_device(device_id: int, device: schemas.DeviceUpdate, db: Session = Depends(auth.get_db), current_user: schemas.User = Depends(auth.get_current_active_user)):
+    updated_device = crud.update_device(db, device=device, device_id=device_id, user_id=current_user.id)
+    if not updated_device:
         raise HTTPException(status_code=404, detail="Device not found")
-    return crud.update_device(db=db, device_id=device_id, device_update=device)
+    return updated_device
 
 # DeviceReading endpoints
 @app.post("/device_readings/", response_model=schemas.DeviceReading, tags=["Device Readings"])
@@ -121,9 +121,8 @@ def read_device_reading(reading_id: int, db: Session = Depends(get_db), token: s
     return reading
 
 @app.get("/device_readings/", response_model=list[schemas.DeviceReading], tags=["Device Readings"])
-def read_device_readings(device_id: int, skip: int = 0, limit: int = 10, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme), current_user: schemas.User = Depends(auth.get_current_active_user)):
-    readings = crud.get_device_readings(db, device_id=device_id, skip=skip, limit=limit, user_id=current_user.id)
-    return readings
+def read_device_readings(device_id: int, db: Session = Depends(auth.get_db), current_user: schemas.User = Depends(auth.get_current_active_user)):
+    return crud.get_device_readings(db=db, device_id=device_id, user_id=current_user.id)
 
 @app.get("/device_readings_pdf", tags=["Device Readings"], response_class=Response)
 def generate_device_readings_pdf_endpoint(device_id: int = None, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme), current_user: schemas.User = Depends(auth.get_current_active_user)):

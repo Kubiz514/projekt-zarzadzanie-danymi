@@ -40,8 +40,8 @@ def update_user(db: Session, user_id: int, user_update: schemas.UserCreate):
     return db_user
 
 # Device CRUD operations
-def get_device(db: Session, device_id: int):
-    return db.query(models.Device).filter(models.Device.id == device_id).first()
+def get_device(db: Session, device_id: int, user_id: int):
+    return db.query(models.Device).filter(models.Device.id == device_id, models.Device.owner_id == user_id).first()
 
 def get_device_by_serial_number(db: Session, serial_number: str):
     return db.query(models.Device).filter(models.Device.serial_number == serial_number).first()
@@ -56,28 +56,36 @@ def create_device(db: Session, device: schemas.DeviceCreate, user_id: int):
     db.refresh(db_device)
     return db_device
 
-def delete_device(db: Session, device_id: int):
-    db_device = db.query(models.Device).filter(models.Device.id == device_id).first()
-    if db_device:
-        db.delete(db_device)
-        db.commit()
+def delete_device(db: Session, device_id: int, user_id: int):
+    db_device = get_device(db, device_id, user_id)
+    if not db_device:
+        return None
+    db.delete(db_device)
+    db.commit()
     return db_device
 
-def update_device(db: Session, device_id: int, device_update: schemas.DeviceCreate):
-    db_device = db.query(models.Device).filter(models.Device.id == device_id).first()
-    if db_device:
-        db_device.name = device_update.name
-        db_device.serial_number = device_update.serial_number
-        db.commit()
-        db.refresh(db_device)
+def update_device(db: Session, device: schemas.DeviceUpdate, device_id: int, user_id: int):
+    db_device = get_device(db, device_id, user_id)
+    if not db_device:
+        return None
+    for key, value in device.dict(exclude_unset=True).items():
+        setattr(db_device, key, value)
+    db.commit()
+    db.refresh(db_device)
     return db_device
 
 # DeviceReading CRUD operations
-def get_device_reading(db: Session, reading_id: int):
-    return db.query(models.DeviceReading).filter(models.DeviceReading.id == reading_id).first()
+def get_device_readings(db: Session, device_id: int, user_id: int, skip: int = 0, limit: int = 100):
+    return db.query(models.DeviceReading).filter(
+        models.DeviceReading.device_id == device_id,
+        models.DeviceReading.device.has(owner_id=user_id)
+    ).first()
 
 def get_device_readings(db: Session, device_id: int, user_id: int, skip: int = 0, limit: int = 100):
-    return db.query(models.DeviceReading).filter(models.DeviceReading.device_id == device_id).join(models.Device).filter(models.Device.owner_id == user_id).offset(skip).limit(limit).all()
+    return db.query(models.DeviceReading).filter(
+        models.DeviceReading.device_id == device_id,
+        models.DeviceReading.device.has(owner_id=user_id)
+    ).offset(skip).limit(limit).all()
 
 def create_device_reading(db: Session, reading: schemas.DeviceReadingCreate):
     db_reading = models.DeviceReading(device_id=reading.device_id, reading_date=reading.reading_date, value=reading.value)
