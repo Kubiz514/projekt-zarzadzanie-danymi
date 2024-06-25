@@ -1,4 +1,3 @@
-# Remove this import if not used elsewhere
 from pydantic import BaseModel
 from datetime import datetime
 from typing import List, Optional
@@ -11,14 +10,10 @@ class UserCreate(UserBase):
 
 class User(UserBase):
     id: int
-    is_active: bool
+    devices: List['Device'] = []
 
     class Config:
         orm_mode = True
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
 
 class DeviceBase(BaseModel):
     name: str
@@ -29,6 +24,7 @@ class DeviceCreate(DeviceBase):
 
 class Device(DeviceBase):
     id: int
+    owner_id: int
 
     class Config:
         orm_mode = True
@@ -46,3 +42,10 @@ class DeviceReading(DeviceReadingBase):
 
     class Config:
         orm_mode = True
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    username: str | None = None

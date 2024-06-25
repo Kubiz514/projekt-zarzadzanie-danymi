@@ -42,7 +42,7 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
 # User endpoints...
 
 @app.post("/users/", response_model=schemas.User, tags=["Users"])
-def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+def create_user(user: schemas.UserCreate, db: Session = Depends(auth.get_db)):
     db_user = crud.get_user_by_username(db, username=user.username)
     if db_user:
         raise HTTPException(status_code=400, detail="Username already registered")
@@ -56,7 +56,7 @@ def read_user(user_id: int, db: Session = Depends(get_db), token: str = Depends(
     return db_user
 
 @app.get("/users/", response_model=list[schemas.User], tags=["Users"])
-def read_users(skip: int = 0, limit: int = 10, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+def read_users(skip: int = 0, limit: int = 10, db: Session = Depends(auth.get_db)):
     users = crud.get_users(db, skip=skip, limit=limit)
     return users
 
@@ -76,11 +76,11 @@ def update_user(user_id: int, user: schemas.UserCreate, db: Session = Depends(ge
 
 # Device endpoints
 @app.post("/devices/", response_model=schemas.Device, tags=["Devices"])
-def create_device(device: schemas.DeviceCreate, db: Session = Depends(get_db)):
+def create_device(device: schemas.DeviceCreate, db: Session = Depends(get_db), current_user: schemas.User = Depends(auth.get_current_active_user)):
     db_device = crud.get_device_by_serial_number(db, serial_number=device.serial_number)
     if db_device:
         raise HTTPException(status_code=400, detail="Device with this serial number already registered")
-    return crud.create_device(db=db, device=device)
+    return crud.create_device(db=db, device=device, user_id=current_user.id)
 
 @app.get("/devices/{device_id}", response_model=schemas.Device, tags=["Devices"])
 def read_device(device_id: int, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
@@ -90,8 +90,8 @@ def read_device(device_id: int, db: Session = Depends(get_db), token: str = Depe
     return db_device
 
 @app.get("/devices/", response_model=list[schemas.Device], tags=["Devices"])
-def read_devices(skip: int = 0, limit: int = 10, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
-    devices = crud.get_devices(db, skip=skip, limit=limit)
+def read_devices(skip: int = 0, limit: int = 10, db: Session = Depends(auth.get_db), current_user: schemas.User = Depends(auth.get_current_active_user)):
+    devices = crud.get_devices(db, user_id=current_user.id, skip=skip, limit=limit)
     return devices
 
 @app.delete("/devices/{device_id}", response_model=schemas.Device, tags=["Devices"])
@@ -121,13 +121,13 @@ def read_device_reading(reading_id: int, db: Session = Depends(get_db), token: s
     return reading
 
 @app.get("/device_readings/", response_model=list[schemas.DeviceReading], tags=["Device Readings"])
-def read_device_readings(device_id: int, skip: int = 0, limit: int = 10, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
-    readings = crud.get_device_readings(db, device_id=device_id, skip=skip, limit=limit)
+def read_device_readings(device_id: int, skip: int = 0, limit: int = 10, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme), current_user: schemas.User = Depends(auth.get_current_active_user)):
+    readings = crud.get_device_readings(db, device_id=device_id, skip=skip, limit=limit, user_id=current_user.id)
     return readings
 
 @app.get("/device_readings_pdf", tags=["Device Readings"], response_class=Response)
-def generate_device_readings_pdf_endpoint(device_id: int = None, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
-    readings = crud.get_device_readings(db, device_id=device_id, skip=0, limit=100)  # Fetching all readings for device_id
+def generate_device_readings_pdf_endpoint(device_id: int = None, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme), current_user: schemas.User = Depends(auth.get_current_active_user)):
+    readings = crud.get_device_readings(db, device_id=device_id, user_id=current_user.id, skip=0, limit=100)  # Fetching all readings for device_id
     pdf_buffer = pdf_generator.generate_device_readings_pdf(readings)
     response = Response(content=pdf_buffer.getvalue(), media_type="application/pdf")
     response.headers["Content-Disposition"] = 'attachment; filename="device_readings.pdf"'

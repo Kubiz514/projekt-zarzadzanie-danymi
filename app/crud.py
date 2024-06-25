@@ -46,11 +46,11 @@ def get_device(db: Session, device_id: int):
 def get_device_by_serial_number(db: Session, serial_number: str):
     return db.query(models.Device).filter(models.Device.serial_number == serial_number).first()
 
-def get_devices(db: Session, skip: int = 0, limit: int = 10):
-    return db.query(models.Device).offset(skip).limit(limit).all()
+def get_devices(db: Session, user_id: int, skip: int = 0, limit: int = 10):
+    return db.query(models.Device).filter(models.Device.owner_id == user_id).offset(skip).limit(limit).all()
 
-def create_device(db: Session, device: schemas.DeviceCreate):
-    db_device = models.Device(name=device.name, serial_number=device.serial_number)
+def create_device(db: Session, device: schemas.DeviceCreate, user_id: int):
+    db_device = models.Device(**device.dict(), owner_id=user_id)
     db.add(db_device)
     db.commit()
     db.refresh(db_device)
@@ -76,8 +76,8 @@ def update_device(db: Session, device_id: int, device_update: schemas.DeviceCrea
 def get_device_reading(db: Session, reading_id: int):
     return db.query(models.DeviceReading).filter(models.DeviceReading.id == reading_id).first()
 
-def get_device_readings(db: Session, device_id: int, skip: int = 0, limit: int = 10):
-    return db.query(models.DeviceReading).filter(models.DeviceReading.device_id == device_id).offset(skip).limit(limit).all()
+def get_device_readings(db: Session, device_id: int, user_id: int, skip: int = 0, limit: int = 100):
+    return db.query(models.DeviceReading).filter(models.DeviceReading.device_id == device_id).join(models.Device).filter(models.Device.owner_id == user_id).offset(skip).limit(limit).all()
 
 def create_device_reading(db: Session, reading: schemas.DeviceReadingCreate):
     db_reading = models.DeviceReading(device_id=reading.device_id, reading_date=reading.reading_date, value=reading.value)
