@@ -8,14 +8,9 @@ from .database import SessionLocal, engine
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="My FastAPI Application",
-    description="This is a sample FastAPI application with JWT authentication and CRUD operations.",
+    title="IoT Manager",
+    description="IoT Manager is an app created for a university project.",
     version="1.0.0",
-    contact={
-        "name": "Your Name",
-        "url": "http://your-website.com",
-        "email": "your-email@domain.com",
-    },
 )
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -39,7 +34,7 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     access_token = auth.create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}
 
-# User endpoints...
+# User endpoints
 
 @app.post("/users/", response_model=schemas.User, tags=["Users"])
 def create_user(user: schemas.UserCreate, db: Session = Depends(auth.get_db)):
@@ -127,7 +122,7 @@ def update_device_reading(reading_id: int, device_id: int, reading: schemas.Devi
 
 @app.get("/device_readings_pdf", tags=["Device Readings"], response_class=Response)
 def generate_device_readings_pdf_endpoint(device_id: int = None, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme), current_user: schemas.User = Depends(auth.get_current_active_user)):
-    readings = crud.get_device_readings(db, device_id=device_id, user_id=current_user.id, skip=0, limit=100)  # Fetching all readings for device_id
+    readings = crud.get_device_readings(db, device_id=device_id, user_id=current_user.id, skip=0, limit=100)
     pdf_buffer = pdf_generator.generate_device_readings_pdf(readings)
     response = Response(content=pdf_buffer.getvalue(), media_type="application/pdf")
     response.headers["Content-Disposition"] = 'attachment; filename="device_readings.pdf"'
