@@ -121,7 +121,7 @@ def update_device_reading(reading_id: int, device_id: int, reading: schemas.Devi
     return updated_reading
 
 @app.get("/device_readings_pdf", tags=["Device Readings"], response_class=Response)
-def generate_device_readings_pdf_endpoint(device_id: int = None, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme), current_user: schemas.User = Depends(auth.get_current_active_user)):
+def generate_device_readings_pdf_endpoint(device_id: int, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme), current_user: schemas.User = Depends(auth.get_current_active_user)):
     readings = crud.get_device_readings(db, device_id=device_id, user_id=current_user.id, skip=0, limit=100)
     pdf_buffer = pdf_generator.generate_device_readings_pdf(readings)
     response = Response(content=pdf_buffer.getvalue(), media_type="application/pdf")
