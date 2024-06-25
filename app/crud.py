@@ -81,37 +81,41 @@ def update_device(db: Session, device: schemas.DeviceUpdate, device_id: int, use
 
 # DeviceReading CRUD operations
 def get_device_readings(db: Session, device_id: int, user_id: int, skip: int = 0, limit: int = 100):
-    return db.query(models.DeviceReading).filter(
-        models.DeviceReading.device_id == device_id,
-        models.DeviceReading.device.has(owner_id=user_id)
-    ).first()
+    device = get_device(db, device_id=device_id, user_id=user_id)
+    if not device:
+        return []
+    return db.query(models.DeviceReading).filter(models.DeviceReading.device_id == device_id).offset(skip).limit(limit).all()
 
-def get_device_readings(db: Session, device_id: int, user_id: int, skip: int = 0, limit: int = 100):
-    return db.query(models.DeviceReading).filter(
-        models.DeviceReading.device_id == device_id,
-        models.DeviceReading.device.has(owner_id=user_id)
-    ).offset(skip).limit(limit).all()
-
-def create_device_reading(db: Session, reading: schemas.DeviceReadingCreate):
-    db_reading = models.DeviceReading(device_id=reading.device_id, reading_date=reading.reading_date, value=reading.value)
+def create_device_reading(db: Session, reading: schemas.DeviceReadingCreate, device_id: int, user_id: int):
+    device = get_device(db, device_id=device_id, user_id=user_id)
+    if not device:
+        return None
+    db_reading = models.DeviceReading(**reading.dict(), device_id=device_id)
     db.add(db_reading)
     db.commit()
     db.refresh(db_reading)
     return db_reading
 
-def delete_device_reading(db: Session, reading_id: int):
-    db_reading = db.query(models.DeviceReading).filter(models.DeviceReading.id == reading_id).first()
-    if db_reading:
-        db.delete(db_reading)
-        db.commit()
+def update_device_reading(db: Session, reading_id: int, reading: schemas.DeviceReadingUpdate, device_id: int, user_id: int):
+    device = get_device(db, device_id=device_id, user_id=user_id)
+    if not device:
+        return None
+    db_reading = db.query(models.DeviceReading).filter(models.DeviceReading.id == reading_id, models.DeviceReading.device_id == device_id).first()
+    if not db_reading:
+        return None
+    for key, value in reading.dict(exclude_unset=True).items():
+        setattr(db_reading, key, value)
+    db.commit()
+    db.refresh(db_reading)
     return db_reading
 
-def update_device_reading(db: Session, reading_id: int, reading_update: schemas.DeviceReadingCreate):
-    db_reading = db.query(models.DeviceReading).filter(models.DeviceReading.id == reading_id).first()
-    if db_reading:
-        db_reading.device_id = reading_update.device_id
-        db_reading.reading_date = reading_update.reading_date
-        db_reading.value = reading_update.value
-        db.commit()
-        db.refresh(db_reading)
+def delete_device_reading(db: Session, reading_id: int, device_id: int, user_id: int):
+    device = get_device(db, device_id=device_id, user_id=user_id)
+    if not device:
+        return None
+    db_reading = db.query(models.DeviceReading).filter(models.DeviceReading.id == reading_id, models.DeviceReading.device_id == device_id).first()
+    if not db_reading:
+        return None
+    db.delete(db_reading)
+    db.commit()
     return db_reading

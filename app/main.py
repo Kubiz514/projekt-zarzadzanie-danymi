@@ -106,20 +106,24 @@ def update_device(device_id: int, device: schemas.DeviceUpdate, db: Session = De
     return updated_device
 
 # DeviceReading endpoints
-@app.post("/device_readings/", response_model=schemas.DeviceReading, tags=["Device Readings"])
-def create_device_reading(reading: schemas.DeviceReadingCreate, db: Session = Depends(get_db)):
-    return crud.create_device_reading(db=db, reading=reading)
-
-@app.get("/device_readings/{reading_id}", tags=["Device Readings"], response_model=schemas.DeviceReading)
-def read_device_reading(reading_id: int, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
-    reading = crud.get_device_reading(db, reading_id=reading_id)
-    if reading is None:
-        raise HTTPException(status_code=404, detail="Reading not found")
-    return reading
-
 @app.get("/device_readings/", response_model=list[schemas.DeviceReading], tags=["Device Readings"])
-def read_device_readings(device_id: int, db: Session = Depends(auth.get_db), current_user: schemas.User = Depends(auth.get_current_active_user)):
-    return crud.get_device_readings(db=db, device_id=device_id, user_id=current_user.id)
+def read_device_readings(device_id: int, skip: int = 0, limit: int = 100, db: Session = Depends(auth.get_db), current_user: schemas.User = Depends(auth.get_current_active_user)):
+    device_readings = crud.get_device_readings(db, device_id=device_id, user_id=current_user.id, skip=skip, limit=limit)
+    return device_readings
+
+@app.post("/device_readings/", response_model=schemas.DeviceReading, tags=["Device Readings"])
+def create_device_reading(device_id: int, reading: schemas.DeviceReadingCreate, db: Session = Depends(auth.get_db), current_user: schemas.User = Depends(auth.get_current_active_user)):
+    db_reading = crud.create_device_reading(db=db, reading=reading, device_id=device_id, user_id=current_user.id)
+    if not db_reading:
+        raise HTTPException(status_code=400, detail="Cannot create reading for this device")
+    return db_reading
+
+@app.put("/device_readings/{reading_id}", response_model=schemas.DeviceReading, tags=["Device Readings"])
+def update_device_reading(reading_id: int, device_id: int, reading: schemas.DeviceReadingUpdate, db: Session = Depends(auth.get_db), current_user: schemas.User = Depends(auth.get_current_active_user)):
+    updated_reading = crud.update_device_reading(db=db, reading_id=reading_id, reading=reading, device_id=device_id, user_id=current_user.id)
+    if not updated_reading:
+        raise HTTPException(status_code=404, detail="Device reading not found or not authorized to update")
+    return updated_reading
 
 @app.get("/device_readings_pdf", tags=["Device Readings"], response_class=Response)
 def generate_device_readings_pdf_endpoint(device_id: int = None, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme), current_user: schemas.User = Depends(auth.get_current_active_user)):
