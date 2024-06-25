@@ -45,6 +45,7 @@ class DeviceReadingBase(BaseModel):
 class DeviceReadingCreate(BaseModel):
     reading_date: datetime
     value: float
+    
 class DeviceReadingUpdate(BaseModel):
     reading_date: Optional[datetime] = None
     value: Optional[float] = None

@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from . import models, schemas, auth
 from passlib.context import CryptContext
 from datetime import datetime
+from app.auth import get_current_user
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -86,6 +87,9 @@ def get_device_readings(db: Session, device_id: int, user_id: int, skip: int = 0
         return []
     return db.query(models.DeviceReading).filter(models.DeviceReading.device_id == device_id).offset(skip).limit(limit).all()
 
+def get_device_by_id_and_user(db: Session, device_id: int, user_id: int):
+    return db.query(models.Device).filter(models.Device.id == device_id, models.Device.owner_id == user_id).first()
+
 def create_device_reading(db: Session, reading: schemas.DeviceReadingCreate, device_id: int, user_id: int):
     db_reading = models.DeviceReading(**reading.dict(), device_id=device_id)
     db.add(db_reading)
@@ -93,7 +97,7 @@ def create_device_reading(db: Session, reading: schemas.DeviceReadingCreate, dev
     db.refresh(db_reading)
     return db_reading
 
-def update_device_reading(db: Session, reading_id: int, reading: schemas.DeviceReadingUpdate, user_id: int):
+def update_device_reading(db: Session, reading_id: int, reading: schemas.DeviceReadingUpdate, user_id: int, device_id: int):
     device = get_device(db, device_id=device_id, user_id=user_id)
     if not device:
         return None

@@ -106,12 +106,18 @@ def read_device_readings(device_id: int, skip: int = 0, limit: int = 100, db: Se
     device_readings = crud.get_device_readings(db, device_id=device_id, user_id=current_user.id, skip=skip, limit=limit)
     return device_readings
 
+
 @app.post("/device_readings/", response_model=schemas.DeviceReading, tags=["Device Readings"])
-def create_device_reading(device_id: int, reading: schemas.DeviceReadingCreate, db: Session = Depends(auth.get_db), current_user: schemas.User = Depends(auth.get_current_active_user)):
-    db_reading = crud.create_device_reading(db=db, reading=reading, device_id=device_id, user_id=current_user.id)
-    if not db_reading:
-        raise HTTPException(status_code=400, detail="Cannot create reading for this device")
-    return db_reading
+def create_device_reading(
+    reading: schemas.DeviceReadingCreate,
+    device_id: int,
+    db: Session = Depends(get_db),
+    current_user: schemas.User = Depends(auth.get_current_user)
+    ):
+    device = crud.get_device_by_id_and_user(db, device_id=device_id, user_id=current_user.id)
+    if not device:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Device not found or not assigned to the user")
+    return crud.create_device_reading(db, reading=reading, device_id=device_id, user_id=current_user.id)
 
 @app.put("/device_readings/{reading_id}", response_model=schemas.DeviceReading, tags=["Device Readings"])
 def update_device_reading(reading_id: int, device_id: int, reading: schemas.DeviceReadingUpdate, db: Session = Depends(auth.get_db), current_user: schemas.User = Depends(auth.get_current_active_user)):
