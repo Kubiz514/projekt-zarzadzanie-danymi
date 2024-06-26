@@ -8,7 +8,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
-    devices = relationship("Device", back_populates="owner")
+    devices = relationship("Device", back_populates="owner", cascade="all, delete-orphan")
 
 class Device(Base):
     __tablename__ = "devices"
@@ -18,13 +18,13 @@ class Device(Base):
     serial_number = Column(String, index=True)
     owner_id = Column(Integer, ForeignKey("users.id"))
     owner = relationship("User", back_populates="devices")
-    readings = relationship("DeviceReading", back_populates="device")
+    readings = relationship("DeviceReading", back_populates="device", cascade="all, delete-orphan")
 
 class DeviceReading(Base):
     __tablename__ = "device_readings"
 
     id = Column(Integer, primary_key=True, index=True)
-    device_id = Column(Integer, ForeignKey("devices.id"))
+    device_id = Column(Integer, ForeignKey("devices.id", ondelete="CASCADE"))
     reading_date = Column(DateTime)
     value = Column(Float)
     device = relationship("Device", back_populates="readings")
